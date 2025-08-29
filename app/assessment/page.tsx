@@ -234,6 +234,7 @@ export default function AssessmentPage() {
       description: "Test time recognition and visuospatial skills",
       icon: Timer,
       color: "from-indigo-500 to-purple-500",
+      
     },
     {
       title: "Verbal Fluency",
@@ -766,16 +767,23 @@ export default function AssessmentPage() {
       mmse: 0,
     })
     // Reset all game states
-    setMemoryCards([
-      { id: 1, content: "🍎", matched: false, flipped: false },
-      { id: 2, content: "🍎", matched: false, flipped: false },
-      { id: 3, content: "🌟", matched: false, flipped: false },
-      { id: 4, content: "🌟", matched: false, flipped: false },
-      { id: 5, content: "🎵", matched: false, flipped: false },
-      { id: 6, content: "🎵", matched: false, flipped: false },
-      { id: 7, content: "🌸", matched: false, flipped: false },
-      { id: 8, content: "🌸", matched: false, flipped: false },
-    ])
+  const emojis = ["🍎", "🌟", "🎵", "🌸", "🐱", "🚀", "🍕", "⚽"];
+
+const generateCards = () => {
+  return [...emojis, ...emojis] // duplicate the set
+    .map((content, index) => ({
+      id: index + 1,
+      content,
+      matched: false,
+      flipped: false
+    }))
+    .sort(() => Math.random() - 0.5); // shuffle
+};
+
+// In your React component:
+setMemoryCards(generateCards());
+
+
     setSelectedCards([])
     setMemoryGameCompleted(false)
     setMemoryAttempts(0)
@@ -1050,7 +1058,7 @@ export default function AssessmentPage() {
                   Attempts: <span className="font-bold">{memoryAttempts}</span>
                 </div>
                 <div className="text-green-400">
-                  Matches: <span className="font-bold">{memoryCards.filter((card) => card.matched).length / 2}</span>/4
+                  Matches: <span className="font-bold">{memoryCards.filter((card) => card.matched).length / 2}</span>/8
                 </div>
               </div>
 
@@ -1196,7 +1204,7 @@ export default function AssessmentPage() {
           </div>
         )
 
-      case 5:
+   case 5:
         return (
           <div className="text-center space-y-8">
             <div className="w-24 h-24 bg-gradient-to-br from-yellow-500 to-green-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
@@ -1529,44 +1537,52 @@ export default function AssessmentPage() {
                       {/* Clock face with numbers */}
                       <div className="absolute inset-4 rounded-full border-2 border-gray-400">
                         {/* Hour markers */}
-                        {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((hour) => (
-                          <div
-                            key={hour}
-                            className="absolute text-lg font-bold text-gray-800"
-                            style={{
-                              top: `${50 + 35 * Math.cos(((hour - 3) * Math.PI) / 6)}%`,
-                              left: `${50 + 35 * Math.sin(((hour - 3) * Math.PI) / 6)}%`,
-                              transform: "translate(-50%, -50%)",
-                            }}
-                          >
-                            {hour}
-                          </div>
-                        ))}
+{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((hour) => {
+  // Shift so 12 is at the top
+  const angle = (hour - 3) * (Math.PI / 6); // 30° per hour
+  const radius = 35; // distance from center
 
-                        {/* Clock hands showing 3:15 */}
-                        {/* Hour hand pointing to 3 */}
-                        <div
-                          className="absolute w-1 bg-gray-800 origin-bottom"
-                          style={{
-                            height: "25%",
-                            top: "25%",
-                            left: "49.5%",
-                            transform: "rotate(90deg)",
-                            transformOrigin: "bottom center",
-                          }}
-                        />
+  return (
+    <div
+      key={hour}
+      className="absolute text-lg font-bold text-gray-800"
+      style={{
+        top: `${50 + radius * Math.sin(angle)}%`,
+        left: `${50 + radius * Math.cos(angle)}%`,
+        transform: "translate(-50%, -50%)",
+          } as React.CSSProperties}
 
-                        {/* Minute hand pointing to 3 (15 minutes) */}
-                        <div
-                          className="absolute w-0.5 bg-gray-600 origin-bottom"
-                          style={{
-                            height: "35%",
-                            top: "15%",
-                            left: "49.75%",
-                            transform: "rotate(90deg)",
-                            transformOrigin: "bottom center",
-                          }}
-                        />
+    >
+      {hour}
+    </div>
+  );
+})}
+
+
+                    {/* Hour hand */}
+<div
+  className="absolute w-1 bg-gray-800 origin-bottom"
+  style={{
+    height: "25%",
+    top: "25%",
+    left: "49.5%",
+    transform: "rotate(97.5deg)",
+    transformOrigin: "bottom center",
+  }}
+/>
+
+{/* Minute hand */}
+<div
+  className="absolute w-0.5 bg-gray-600 origin-bottom"
+  style={{
+    height: "35%",
+    top: "15%",
+    left: "49.75%",
+    transform: "rotate(90deg)",
+    transformOrigin: "bottom center",
+  }}
+/>
+
 
                         {/* Center dot */}
                         <div className="absolute w-3 h-3 bg-gray-800 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />

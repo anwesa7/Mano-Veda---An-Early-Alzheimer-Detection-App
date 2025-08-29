@@ -70,7 +70,7 @@ export default function HomePage() {
   const globalStats = [
     { label: "Alzheimer's Patients by 2030", value: "32M", icon: Users, color: "from-red-500 to-pink-500" },
     { label: "Early Detection Rate", value: "16%", icon: Activity, color: "from-orange-500 to-yellow-500" },
-    { label: "Years Earlier Detection", value: "6", icon: TrendingUp, color: "from-blue-500 to-cyan-500" },
+    { label: "Late Detection Rate", value: "60-70%", icon: TrendingUp, color: "from-blue-500 to-cyan-500" },
     { label: "AI Accuracy Rate", value: "94.7%", icon: Brain, color: "from-purple-500 to-pink-500" },
   ]
 
@@ -87,7 +87,7 @@ export default function HomePage() {
     {
       title: "Early Detection Impact",
       stats: [
-        { label: "Detection Improvement", value: "6 Years", description: "Earlier than traditional methods" },
+        { label: "Detection Improvement", value: "60-70%", description: "Earlier than traditional methods" },
         { label: "Cost Reduction", value: "40%", description: "In long-term care expenses" },
         { label: "Quality of Life", value: "85%", description: "Improvement with early intervention" },
         { label: "Family Preparedness", value: "90%", description: "Better planning and support" },
@@ -408,9 +408,9 @@ export default function HomePage() {
 
           {/* Research Partners */}
           <div className="text-center">
-            <h3 className="text-3xl font-bold text-white mb-8">Research Partners</h3>
+            <h3 className="text-3xl font-bold text-white mb-8">Developers</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {["Mayo Clinic", "Johns Hopkins", "Stanford Medicine", "Harvard Medical"].map((partner, index) => (
+              {["Anwesa Banerjee", "Mousoom Samanta", "Dipanjan Basak", "Titli Dutta"].map((partner, index) => (
                 <div
                   key={index}
                   className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 p-6 rounded-2xl border border-white/10"
