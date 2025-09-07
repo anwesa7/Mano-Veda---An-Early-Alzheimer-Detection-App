@@ -165,8 +165,13 @@ export default function AssessmentPage() {
   const [mmseCurrentQuestion, setMmseCurrentQuestion] = useState(0)
   const [mmseCompleted, setMmseCompleted] = useState(false)
 
-  // Voice recording completion
+  // Voice/audio upload state
   const [voiceRecordingCompleted, setVoiceRecordingCompleted] = useState(false)
+  const [uploadedAudio, setUploadedAudio] = useState<File | null>(null)
+  const [audioURL, setAudioURL] = useState<string | null>(null)
+  const [wavBlob, setWavBlob] = useState<Blob | null>(null)
+  const [isConvertingAudio, setIsConvertingAudio] = useState(false)
+  const [audioError, setAudioError] = useState<string | null>(null)
 
   const steps = [
     {
@@ -177,7 +182,7 @@ export default function AssessmentPage() {
     },
     {
       title: "Voice Analysis",
-      description: "Record your voice for speech pattern analysis",
+      description: "Upload your audio for speech pattern analysis",
       icon: Mic,
       color: "from-purple-500 to-pink-500",
     },
@@ -685,9 +690,47 @@ export default function AssessmentPage() {
     setVerbalFluencyStarted(true)
   }
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (!canProceedToNextStep()) {
       return
+    }
+
+    // If on Voice Analysis step (index 1), fire background analysis if WAV exists
+    if (currentStep === 1 && wavBlob) {
+      try {
+        const form = new FormData()
+        if (uploadedAudio) form.append('original', uploadedAudio)
+        form.append('wav', wavBlob, 'audio.wav')
+
+        // Non-blocking fire-and-forget: do not await navigation; run promise in background
+        ;(async () => {
+          try {
+            const res = await fetch('/api/voice/analyze', { method: 'POST', body: form })
+            if (res.ok) {
+              const data = await res.json()
+              // Merge into assessmentResults in localStorage
+              const stored = localStorage.getItem('assessmentResults')
+              const base = stored ? JSON.parse(stored) : {}
+              const updated = {
+                ...base,
+                voiceAnalysis: {
+                  label: data.label,
+                  confidence: data.confidence,
+                  clarity: data.clarity,
+                  fluency: data.fluency,
+                  pace: data.pace,
+                  featuresSummary: data.featuresSummary,
+                },
+              }
+              localStorage.setItem('assessmentResults', JSON.stringify(updated))
+            }
+          } catch (e) {
+            console.error('Background voice analysis failed', e)
+          }
+        })()
+      } catch (e) {
+        console.error('Error preparing voice analysis request', e)
+      }
     }
 
     if (currentStep < steps.length - 1) {
@@ -706,7 +749,8 @@ export default function AssessmentPage() {
       case 0:
         return hasPatientInfo
       case 1:
-        return voiceRecordingCompleted && recordingTime >= 10
+        // Either successful upload+conversion OR legacy recording flow reaching 10s
+        return voiceRecordingCompleted && (!!wavBlob || recordingTime >= 10)
       case 2:
         return memoryGameCompleted
       case 3:
@@ -835,19 +879,19 @@ setMemoryCards(generateCards());
     switch (currentStep) {
       case 0:
         return (
-          <div className="text-center space-y-12">
+          <div className="text-center space-y-8 sm:space-y-12 px-4">
             {!hasPatientInfo && (
               <Card className="bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/20 backdrop-blur-xl max-w-3xl mx-auto">
-                <CardContent className="p-8">
-                  <div className="text-red-300 font-bold text-xl mb-3 flex items-center justify-center">
-                    <AlertCircle className="mr-3 h-6 w-6" />
+                <CardContent className="p-4 sm:p-6 lg:p-8">
+                  <div className="text-red-300 font-bold text-lg sm:text-xl mb-3 flex items-center justify-center">
+                    <AlertCircle className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
                     Patient Information Required
                   </div>
-                  <p className="text-red-400 mb-6">
+                  <p className="text-red-400 mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed">
                     Please complete the patient information form before starting the assessment.
                   </p>
                   <Link href="/patient-info">
-                    <Button className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 px-8 py-3 text-lg rounded-xl">
+                    <Button className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 px-6 sm:px-8 py-3 text-base sm:text-lg rounded-xl btn-mobile w-full sm:w-auto">
                       Complete Patient Info
                     </Button>
                   </Link>
@@ -858,29 +902,29 @@ setMemoryCards(generateCards());
             {hasPatientInfo && (
               <>
                 <div className="relative">
-                  <div className="w-32 h-32 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-purple-500/25 animate-pulse">
-                    <Brain className="h-16 w-16 text-white" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-purple-500/25 animate-pulse">
+                    <Brain className="h-10 w-10 sm:h-12 sm:w-12 lg:h-16 lg:w-16 text-white" />
                   </div>
-                  <div className="absolute -top-4 -right-4 w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full flex items-center justify-center animate-bounce">
-                    <Sparkles className="h-6 w-6 text-white" />
+                  <div className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full flex items-center justify-center animate-bounce">
+                    <Sparkles className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                   </div>
                 </div>
 
-                <div>
-                  <h2 className="text-6xl font-black text-white mb-8">
+                <div className="px-4">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-6xl font-black text-white mb-4 sm:mb-6 lg:mb-8 leading-tight">
                     Comprehensive Cognitive
                     <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                       Assessment
                     </span>
                   </h2>
-                  <p className="text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed font-light">
+                  <p className="text-sm sm:text-base lg:text-lg xl:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed font-light">
                     This scientifically-validated assessment combines AI-powered voice analysis with multiple cognitive
                     games to evaluate your brain health across 8 key domains including MMSE screening.
-                    <span className="block mt-4 text-purple-400">✨ Powered by Mano Veda AI</span>
+                    <span className="block mt-2 sm:mt-4 text-purple-400 text-xs sm:text-sm lg:text-base xl:text-lg">✨ Powered by Mano Veda AI</span>
                   </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto px-4">
                   {[
                     {
                       icon: Mic,
@@ -903,16 +947,16 @@ setMemoryCards(generateCards());
                   ].map((item, index) => (
                     <Card
                       key={index}
-                      className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-white/10 backdrop-blur-xl hover:border-white/20 transition-all duration-500 hover:scale-105 group"
+                      className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-white/10 backdrop-blur-xl hover:border-white/20 transition-all duration-500 hover:scale-105 group card-mobile"
                     >
-                      <CardContent className="p-8 text-center">
+                      <CardContent className="p-4 sm:p-6 lg:p-8 text-center">
                         <div
-                          className={`w-16 h-16 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 group-hover:rotate-12 transition-all duration-500`}
+                          className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-xl group-hover:scale-110 group-hover:rotate-12 transition-all duration-500`}
                         >
-                          <item.icon className="h-8 w-8 text-white" />
+                          <item.icon className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
                         </div>
-                        <h3 className="font-bold text-white mb-3 text-xl">{item.title}</h3>
-                        <p className="text-gray-400">{item.desc}</p>
+                        <h3 className="font-bold text-white mb-2 sm:mb-3 text-base sm:text-lg lg:text-xl leading-tight">{item.title}</h3>
+                        <p className="text-gray-400 text-xs sm:text-sm lg:text-base leading-relaxed">{item.desc}</p>
                       </CardContent>
                     </Card>
                   ))}
@@ -950,72 +994,158 @@ setMemoryCards(generateCards());
 
       case 1:
         return (
-          <div className="text-center space-y-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
-              <Mic className="h-12 w-12 text-white" />
+          <div className="text-center space-y-6 sm:space-y-8 px-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
+              <Mic className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-white" />
             </div>
-            <h2 className="text-4xl font-bold text-white">Voice Analysis</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Please record yourself reading the following passage. This helps us analyze speech patterns, fluency, and
-              cognitive markers.
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight">Voice Analysis</h2>
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              Upload an audio file (any common format). We'll convert it to WAV internally. You can preview it before sending for analysis.
             </p>
 
             <Card className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-purple-500/20 backdrop-blur-xl max-w-3xl mx-auto">
-              <CardContent className="p-8">
-                <div className="text-left text-lg text-gray-200 leading-relaxed mb-8 p-6 bg-gray-800/30 rounded-xl">
-                  <p className="mb-4">
-                    "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet
-                    and is commonly used for testing purposes."
-                  </p>
-                  <p className="mb-4">
-                    "Memory is the treasure house of the mind wherein the monuments thereof are kept and preserved. It
-                    allows us to learn from experience and adapt to new situations."
-                  </p>
-                  <p>
-                    "Cognitive health is essential for maintaining independence and quality of life as we age. Regular
-                    mental exercise can help keep our minds sharp and resilient."
-                  </p>
-                </div>
+              <CardContent className="p-4 sm:p-6 lg:p-8">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="text-left text-sm sm:text-base lg:text-lg text-gray-200 leading-relaxed p-4 sm:p-6 bg-gray-800/30 rounded-xl">
+                    <p className="mb-2 font-semibold text-purple-300">Instructions</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Upload clear speech of at least 10 seconds.</li>
+                      <li>Supported: .mp3, .m4a, .aac, .wav, .webm, .ogg and more.</li>
+                      <li>We will convert it to WAV automatically.</li>
+                    </ul>
+                  </div>
 
-                <div className="space-y-6">
-                  <Button
-                    onClick={handleRecordingToggle}
-                    size="lg"
-                    className={`w-full py-6 text-xl ${
-                      isRecording
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                    }`}
-                  >
-                    {isRecording ? (
-                      <>
-                        <Pause className="mr-3 h-6 w-6" />
-                        Stop Recording ({recordingTime}s)
-                      </>
-                    ) : (
-                      <>
-                        <Play className="mr-3 h-6 w-6" />
-                        Start Recording
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={(e) => {
+                        setAudioError(null)
+                        const file = e.target.files?.[0] || null
+                        setUploadedAudio(file)
+                        if (audioURL) URL.revokeObjectURL(audioURL)
+                        setAudioURL(file ? URL.createObjectURL(file) : null)
+                        setWavBlob(null)
+                        setVoiceRecordingCompleted(false)
+                      }}
+                      className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700"
+                    />
+                    <Button
+                      type="button"
+                      disabled={!uploadedAudio || isConvertingAudio}
+                      onClick={async () => {
+                        if (!uploadedAudio) return
+                        try {
+                          setIsConvertingAudio(true)
+                          setAudioError(null)
 
-                  {recordingTime > 0 && (
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400 mb-2">{recordingTime} seconds</div>
-                      <div className="text-sm text-gray-400">
-                        {recordingTime >= 10 ? "✅ Recording complete!" : `Need ${10 - recordingTime} more seconds`}
-                      </div>
+                          // If it's already a WAV, just use it as-is
+                          const isWav = (
+                            uploadedAudio.type?.toLowerCase().includes('wav') ||
+                            uploadedAudio.name?.toLowerCase().endsWith('.wav')
+                          )
+                          if (isWav) {
+                            setWavBlob(uploadedAudio)
+                            setVoiceRecordingCompleted(true)
+                            return
+                          }
+
+                          const arrayBuffer = await uploadedAudio.arrayBuffer()
+                          // Convert to WAV using WebAudio API (client-side)
+                          const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
+                          const audioCtx = new AudioCtx()
+                          const decoded = await audioCtx.decodeAudioData(arrayBuffer)
+                          const numOfChan = decoded.numberOfChannels
+
+                          // Interleave channels
+                          const channels: Float32Array[] = []
+                          for (let i = 0; i < numOfChan; i++) channels.push(decoded.getChannelData(i))
+                          const interleaved = new Float32Array(decoded.length * numOfChan)
+                          for (let i = 0; i < decoded.length; i++) {
+                            for (let ch = 0; ch < numOfChan; ch++) {
+                              interleaved[i * numOfChan + ch] = channels[ch][i]
+                            }
+                          }
+
+                          // Allocate proper buffer: header (44) + data (samples * 2 bytes)
+                          const wavBuffer = new ArrayBuffer(44 + interleaved.length * 2)
+                          const view = new DataView(wavBuffer)
+
+                          const writeString = (offset: number, str: string) => {
+                            for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i))
+                          }
+
+                          const bitDepth = 16
+                          const byteRate = decoded.sampleRate * numOfChan * (bitDepth / 8)
+                          const blockAlign = numOfChan * (bitDepth / 8)
+
+                          // RIFF header
+                          writeString(0, 'RIFF')
+                          view.setUint32(4, 36 + interleaved.length * 2, true)
+                          writeString(8, 'WAVE')
+
+                          // fmt chunk
+                          writeString(12, 'fmt ')
+                          view.setUint32(16, 16, true) // Subchunk1Size (16 for PCM)
+                          view.setUint16(20, 1, true)  // AudioFormat (1 = PCM)
+                          view.setUint16(22, numOfChan, true)
+                          view.setUint32(24, decoded.sampleRate, true)
+                          view.setUint32(28, byteRate, true)
+                          view.setUint16(32, blockAlign, true)
+                          view.setUint16(34, bitDepth, true)
+
+                          // data chunk
+                          writeString(36, 'data')
+                          view.setUint32(40, interleaved.length * 2, true)
+
+                          // PCM samples
+                          let offset = 44
+                          for (let i = 0; i < interleaved.length; i++, offset += 2) {
+                            let s = Math.max(-1, Math.min(1, interleaved[i]))
+                            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true)
+                          }
+
+                          // Close context to release resources
+                          if (audioCtx && audioCtx.close) await audioCtx.close()
+
+                          const wav = new Blob([new Uint8Array(wavBuffer)], { type: 'audio/wav' })
+                          setWavBlob(wav)
+                          setVoiceRecordingCompleted(true)
+                        } catch (err: any) {
+                          console.error(err)
+                          setAudioError('Audio conversion failed. Please try a different file.')
+                          setVoiceRecordingCompleted(false)
+                        } finally {
+                          setIsConvertingAudio(false)
+                        }
+                      }}
+                      className="sm:w-48"
+                    >
+                      {isConvertingAudio ? 'Converting…' : 'Convert to WAV'}
+                    </Button>
+                  </div>
+
+                  {audioURL && (
+                    <div className="rounded-xl p-4 bg-gray-800/40 border border-gray-700">
+                      <p className="text-sm text-gray-300 mb-2">Preview uploaded audio</p>
+                      <audio controls src={audioURL} className="w-full" />
                     </div>
                   )}
 
-                  {isRecording && (
-                    <div className="flex items-center justify-center space-x-2 text-red-400">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                      <span>Recording in progress...</span>
-                      <Volume2 className="h-5 w-5 animate-pulse" />
+                  {wavBlob && (
+                    <div className="rounded-xl p-4 bg-gray-800/40 border border-gray-700">
+                      <p className="text-sm text-gray-300 mb-2">Converted WAV (preview)</p>
+                      <audio controls src={URL.createObjectURL(wavBlob)} className="w-full" />
                     </div>
                   )}
+
+                  {audioError && (
+                    <div className="text-red-400 text-sm">{audioError}</div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Removed Send for Analysis button - analysis now triggers automatically on Continue */}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1033,24 +1163,24 @@ setMemoryCards(generateCards());
               Click on cards to flip them and find matching pairs. Test your visual memory and pattern recognition.
             </p>
 
-            <div className="max-w-2xl mx-auto">
-              <div className="grid grid-cols-4 gap-4 mb-8">
+            <div className="max-w-2xl mx-auto px-4">
+              <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-6 sm:mb-8">
                 {memoryCards.map((card) => (
                   <div
                     key={card.id}
                     onClick={() => handleMemoryCardClick(card.id)}
-                    className={`aspect-square rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center text-4xl ${
+                    className={`aspect-square rounded-lg sm:rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center text-2xl sm:text-3xl lg:text-4xl ${
                       card.flipped || card.matched
                         ? "bg-gradient-to-br from-blue-500 to-purple-500 text-white transform scale-105"
                         : "bg-gradient-to-br from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700"
-                    } ${card.matched ? "ring-4 ring-green-400" : ""}`}
+                    } ${card.matched ? "ring-2 sm:ring-4 ring-green-400" : ""}`}
                   >
                     {card.flipped || card.matched ? card.content : "?"}
                   </div>
                 ))}
               </div>
 
-              <div className="flex justify-between items-center text-lg">
+              <div className="flex flex-col sm:flex-row justify-between items-center text-sm sm:text-base lg:text-lg gap-2 sm:gap-0">
                 <div className="text-blue-400">
                   Score: <span className="font-bold">{gameScores.memory}</span>
                 </div>
@@ -1074,12 +1204,12 @@ setMemoryCards(generateCards());
 
       case 3:
         return (
-          <div className="text-center space-y-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-orange-600 rounded-3xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
-              <Target className="h-12 w-12 text-white" />
+          <div className="text-center space-y-6 sm:space-y-8 px-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto shadow-2xl animate-pulse">
+              <Target className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-white" />
             </div>
-            <h2 className="text-4xl font-bold text-white">Attention Focus Test</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight">Attention Focus Test</h2>
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-gray-300 max-w-2xl mx-auto px-4 leading-relaxed">
               Click on the moving target as quickly and accurately as possible. This tests sustained attention and
               reaction time.
             </p>
@@ -1087,7 +1217,7 @@ setMemoryCards(generateCards());
             <div className="max-w-2xl mx-auto">
               <div
                 onClick={handleAttentionClick}
-                className="relative w-full h-96 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border-2 border-gray-600 cursor-crosshair overflow-hidden"
+                className="relative w-full h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border-2 border-gray-600 cursor-crosshair overflow-hidden"
               >
                 {!attentionGameCompleted && (
                   <div
@@ -1108,7 +1238,7 @@ setMemoryCards(generateCards());
                 )}
               </div>
 
-              <div className="flex justify-between items-center text-lg mt-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center text-sm sm:text-base lg:text-lg mt-4 sm:mt-6 gap-2 sm:gap-0">
                 <div className="text-blue-400">
                   Score: <span className="font-bold">{attentionScore}</span>
                 </div>
@@ -1121,9 +1251,9 @@ setMemoryCards(generateCards());
               </div>
 
               {attentionGameCompleted && (
-                <div className="mt-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
-                  <div className="text-green-300 font-bold text-xl mb-2">🎯 Great Focus!</div>
-                  <div className="text-green-200">Final Score: {gameScores.attention}/100</div>
+                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-500/20 border border-green-500/30 rounded-xl">
+                  <div className="text-green-300 font-bold text-lg sm:text-xl mb-2">🎯 Great Focus!</div>
+                  <div className="text-green-200 text-sm sm:text-base">Final Score: {gameScores.attention}/100</div>
                 </div>
               )}
             </div>
@@ -1409,9 +1539,12 @@ setMemoryCards(generateCards());
               {showWordRecallWords ? (
                 <Card className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-blue-500/20 backdrop-blur-xl">
                   <CardContent className="p-8">
-                    <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-6">
                       {wordRecallWords.map((word, index) => (
-                        <div key={index} className="text-2xl font-bold text-blue-400 p-4 bg-gray-800/50 rounded-lg">
+                        <div
+                          key={index}
+                          className="text-xl sm:text-2xl font-bold text-blue-400 p-3 sm:p-4 bg-gray-800/50 rounded-lg whitespace-nowrap text-center"
+                        >
                           {word}
                         </div>
                       ))}
@@ -1852,7 +1985,7 @@ setMemoryCards(generateCards());
   }
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden relative">
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900"></div>
@@ -1891,90 +2024,99 @@ setMemoryCards(generateCards());
 
       {/* Header */}
       <header className="relative z-50 border-b border-white/10 bg-black/50 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-4 group">
-            <div className="relative">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all duration-500 group-hover:scale-110">
-                <Brain className="h-8 w-8 text-white animate-pulse" />
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-4 group">
+              <div className="relative">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all duration-500 group-hover:scale-110">
+                  <Brain className="h-5 w-5 sm:h-8 sm:w-8 text-white animate-pulse" />
+                </div>
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full border-2 border-black animate-bounce">
+                  <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-green-400 rounded-full animate-ping" />
+                </div>
               </div>
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full border-2 border-black animate-bounce">
-                <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-green-400 rounded-full animate-ping" />
+              <div className="hidden sm:block">
+                <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Mano Veda
+                </span>
+                <div className="text-xs sm:text-sm text-gray-400 font-medium flex items-center">
+                  <Sparkles className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
+                  AI-Powered Assessment
+                </div>
               </div>
+              <div className="sm:hidden">
+                <span className="text-xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Mano Veda
+                </span>
+              </div>
+            </Link>
+            
+            <div className="flex items-center">
+              <Badge className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30 px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-bold backdrop-blur-sm">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-400 rounded-full mr-1 sm:mr-2 animate-pulse" />
+                <span className="hidden sm:inline">Assessment in Progress</span>
+                <span className="sm:hidden">In Progress</span>
+              </Badge>
             </div>
-            <div>
-              <span className="text-3xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Mano Veda
-              </span>
-              <div className="text-sm text-gray-400 font-medium flex items-center">
-                <Sparkles className="w-3 h-3 mr-1" />
-                AI-Powered Assessment
-              </div>
-            </div>
-          </Link>
-          <div className="flex items-center space-x-4">
-            <Badge className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30 px-4 py-2 font-bold backdrop-blur-sm">
-              <div className="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse" />
-              Assessment in Progress
-            </Badge>
           </div>
         </div>
       </header>
 
       {/* Progress Section */}
       <div className="relative z-40 bg-gradient-to-r from-gray-900/50 via-black/50 to-gray-900/50 border-b border-white/10 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-6">
+        <div className="container mx-auto px-4 py-4 sm:py-6 lg:py-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <div
-                className={`w-20 h-20 bg-gradient-to-br ${steps[currentStep].color} rounded-3xl flex items-center justify-center shadow-2xl animate-pulse`}
+                className={`w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-gradient-to-br ${steps[currentStep].color} rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl animate-pulse`}
               >
-                {React.createElement(steps[currentStep].icon, { className: "h-10 w-10 text-white" })}
+                {React.createElement(steps[currentStep].icon, { className: "h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-white" })}
               </div>
               <div>
-                <h3 className="text-3xl font-black text-white">{steps[currentStep].title}</h3>
-                <p className="text-gray-300 text-xl font-light">{steps[currentStep].description}</p>
+                <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-black text-white leading-tight">{steps[currentStep].title}</h3>
+                <p className="text-gray-300 text-xs sm:text-sm lg:text-base xl:text-lg font-light leading-relaxed mt-1">{steps[currentStep].description}</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-sm font-bold text-gray-400 mb-2">
+            <div className="text-right sm:text-right">
+              <div className="text-xs sm:text-sm font-bold text-gray-400 mb-1 sm:mb-2">
                 Step {currentStep + 1} of {steps.length}
               </div>
-              <div className="text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <div className="text-2xl sm:text-3xl lg:text-5xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 {metrics.actualProgress}%
               </div>
             </div>
           </div>
-          <div className="relative">
-            <Progress value={metrics.actualProgress} className="h-6 bg-gray-800/50" />
+          <div className="relative mt-4 sm:mt-0">
+            <Progress value={metrics.actualProgress} className="h-4 sm:h-6 bg-gray-800/50" />
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-20 blur-sm" />
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="relative z-30 py-16 px-4">
-        <div className="container mx-auto max-w-7xl">
+      <main className="relative z-30 py-6 sm:py-8 lg:py-12 xl:py-16 px-4 sm:px-6 lg:px-8">
+        <div className="container mx-auto max-w-7xl w-full">
           {renderStepContent()}
 
           {/* Navigation */}
-          <div className="flex justify-between items-center mt-20">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-12 sm:mt-16 lg:mt-20 gap-4 sm:gap-0">
             <Button
               onClick={prevStep}
               disabled={currentStep === 0}
               variant="outline"
               size="lg"
-              className="group bg-transparent border-2 border-white/20 hover:border-white/40 text-white hover:bg-white/10 px-10 py-6 text-xl font-bold disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 rounded-xl"
+              className="group bg-transparent border-2 border-white/20 hover:border-white/40 text-white hover:bg-white/10 px-6 sm:px-8 lg:px-10 py-4 sm:py-5 lg:py-6 text-base sm:text-lg lg:text-xl font-bold disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 rounded-xl btn-mobile w-full sm:w-auto"
             >
-              <ArrowLeft className="mr-4 h-6 w-6 group-hover:-translate-x-1 transition-transform duration-300" />
+              <ArrowLeft className="mr-2 sm:mr-3 lg:mr-4 h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 group-hover:-translate-x-1 transition-transform duration-300" />
               Previous
             </Button>
 
-            <div className="text-center">
-              <div className="text-xs text-gray-500 mb-2">
+            <div className="text-center order-first sm:order-none">
+              <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
                 Step {currentStep + 1}: {steps[currentStep].title}
               </div>
               <div className="text-xs text-gray-400">Can proceed: {canProceedToNextStep() ? "✅" : "❌"}</div>
-              <div className="text-xs text-purple-400 mt-1">✨ Mannu AI Assistant Available</div>
+              <div className="text-xs text-purple-400 mt-1 hidden sm:block">✨ Mannu AI Assistant Available</div>
             </div>
 
             {currentStep < steps.length - 2 ? (
@@ -1986,12 +2128,13 @@ setMemoryCards(generateCards());
                   canProceedToNextStep()
                     ? "bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600"
                     : "bg-gradient-to-r from-gray-600 to-gray-700 cursor-not-allowed"
-                } text-white text-xl px-12 py-6 rounded-2xl shadow-2xl transition-all duration-500 transform hover:scale-105 border-0 overflow-hidden`}
+                } text-white text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 rounded-xl sm:rounded-2xl shadow-2xl transition-all duration-500 transform hover:scale-105 border-0 overflow-hidden btn-mobile w-full sm:w-auto`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center z-10">
-                  {canProceedToNextStep() ? "Continue" : "Complete Current Test"}
-                  <ArrowRight className="ml-4 h-6 w-6 group-hover:translate-x-1 transition-transform duration-300" />
+                <div className="relative flex items-center justify-center z-10">
+                  <span className="hidden sm:inline">{canProceedToNextStep() ? "Continue" : "Complete Current Test"}</span>
+                  <span className="sm:hidden">{canProceedToNextStep() ? "Continue" : "Complete Test"}</span>
+                  <ArrowRight className="ml-2 sm:ml-3 lg:ml-4 h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 group-hover:translate-x-1 transition-transform duration-300" />
                 </div>
               </Button>
             ) : (
@@ -2027,11 +2170,11 @@ setMemoryCards(generateCards());
                   router.push("/results")
                 }}
                 size="lg"
-                className="group relative bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-xl px-12 py-6 rounded-2xl shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-500 transform hover:scale-105 border-0 overflow-hidden"
+                className="group relative bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-4 sm:py-5 lg:py-6 rounded-xl sm:rounded-2xl shadow-2xl shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-500 transform hover:scale-105 border-0 overflow-hidden btn-mobile w-full sm:w-auto"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative flex items-center z-10">
-                  <CheckCircle className="mr-4 h-6 w-6" />
+                <div className="relative flex items-center justify-center z-10">
+                  <CheckCircle className="mr-2 sm:mr-3 lg:mr-4 h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
                   View Results
                 </div>
               </Button>

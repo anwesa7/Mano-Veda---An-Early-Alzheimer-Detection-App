@@ -70,32 +70,36 @@ const languages: Language[] = [
 const translations = {
   en: {
     greeting:
-      "Hello! I'm Mannu, your AI health companion. I'm here to help you with your cognitive assessment and answer questions about brain health. You can speak to me or type messages. How can I assist you today?",
-    help: "I'm here to help! I can explain how cognitive tests work, provide encouragement, answer brain health questions, schedule consultations, or chat to keep you comfortable. What do you need help with?",
+      "Hello! I'm Mannu, your AI cognitive health companion. I'm here to guide you through your assessment and provide personalized support. You can speak to me or type messages. How can I assist you today?",
+    help: "I'm here to help! I can explain how cognitive tests work, provide step-by-step guidance, offer encouragement, answer brain health questions, schedule consultations, or just chat to keep you comfortable. What specific help do you need?",
     assessment:
-      "This comprehensive assessment evaluates memory, attention, processing speed, and executive function. Each test is scientifically designed and validated. Don't worry about perfect performance - just do your best!",
-    time: "The complete assessment takes 20-25 minutes. You can take breaks between sections if needed. Focus on doing your best rather than rushing.",
+      "This comprehensive assessment evaluates multiple cognitive domains including memory, attention, processing speed, and executive function. Each test is scientifically validated and used in clinical settings. Remember, this isn't about pass/fail - it's about understanding your unique cognitive profile!",
+    time: "The complete assessment takes about 20-25 minutes total. Each individual test takes 2-3 minutes. You can take breaks between sections if needed. Focus on doing your best rather than rushing - quality over speed!",
     nervous:
-      "It's completely normal to feel nervous! This assessment is designed to help, not judge. Take deep breaths, relax, and remember I'm here to support you. You're doing great!",
+      "It's completely normal to feel nervous! This assessment is designed to help you understand your cognitive health, not to judge you. Take deep breaths, relax, and remember that I'm here to support you every step of the way. You're doing great just by being here!",
     brainTips: [
-      "Regular exercise increases blood flow to the brain and promotes new neural connections.",
-      "Getting 7-9 hours of quality sleep helps consolidate memories and clear brain toxins.",
-      "Eating foods rich in omega-3 fatty acids, like fish and nuts, supports brain health.",
-      "Learning new skills or languages creates new neural pathways and keeps your brain active.",
-      "Social connections and meaningful relationships are crucial for cognitive health.",
-      "Meditation and mindfulness practices can improve focus and reduce stress on the brain.",
+      "Regular physical exercise increases blood flow to the brain and promotes neuroplasticity - even a 20-minute walk helps!",
+      "Quality sleep (7-9 hours) helps consolidate memories and clear brain toxins through the glymphatic system.",
+      "Eating omega-3 rich foods like fish, nuts, and seeds supports brain structure and function.",
+      "Learning new skills or languages creates new neural pathways and builds cognitive reserve.",
+      "Social connections and meaningful relationships are crucial for cognitive health and emotional well-being.",
+      "Meditation and mindfulness practices can improve focus, reduce stress, and enhance cognitive flexibility.",
+      "Staying mentally active with puzzles, reading, or creative activities keeps your brain engaged and sharp.",
+      "Staying hydrated and limiting alcohol helps maintain optimal brain function and clarity."
     ],
     encouragement: [
-      "You're doing wonderfully! Every step you take in this assessment is valuable.",
-      "I believe in you! Your brain is amazing and capable of great things.",
-      "Remember, this isn't about being perfect - it's about understanding your cognitive strengths.",
+      "You're doing wonderfully! Every step you take in this assessment provides valuable insights about your cognitive health.",
+      "I believe in you! Your brain is remarkable and capable of amazing things.",
+      "Remember, this isn't about perfection - it's about understanding your cognitive strengths and areas to nurture.",
       "You've got this! Take your time and trust in your abilities.",
       "I'm proud of you for taking this important step in understanding your brain health.",
+      "Your effort and participation are what matter most. You're showing great dedication to your cognitive wellness!",
+      "Each test you complete is building a clearer picture of your cognitive profile. You're doing excellent work!"
     ],
     schedule:
-      "I can help you schedule a consultation with our healthcare professionals. What type of appointment would you like?",
+      "I can help you schedule a consultation with our healthcare professionals. We offer neurological consultations, cognitive therapy sessions, memory assessments, and general brain health check-ups. What type of appointment would you like to book?",
     consultationScheduled:
-      "Excellent! I've scheduled your consultation. You'll receive a confirmation email with all the details shortly. Is there anything else I can help you with?",
+      "Excellent! I've scheduled your consultation. You'll receive a confirmation email with all the details, preparation instructions, and what to expect. Is there anything else I can help you with regarding your cognitive health?",
   },
   es: {
     greeting:
@@ -179,7 +183,15 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
   const [isTyping, setIsTyping] = useState(false)
   const [showScheduleOptions, setShowScheduleOptions] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
+  const [isExtrasOpen, setIsExtrasOpen] = useState(false)
   const [interimTranscript, setInterimTranscript] = useState("")
+  const [conversationContext, setConversationContext] = useState<string[]>([])
+  const [userPreferences, setUserPreferences] = useState({
+    hasAskedForHelp: false,
+    preferredResponseStyle: 'detailed', // 'brief' | 'detailed' | 'encouraging'
+    commonQuestions: [] as string[],
+    strugglingAreas: [] as string[]
+  })
 
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
@@ -197,6 +209,58 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
       },
     ])
   }, [currentLanguage])
+
+  // Proactive help system - offer assistance when user seems to be struggling
+  useEffect(() => {
+    if (currentStep > 0 && userPreferences.strugglingAreas.length > 1) {
+      const timer = setTimeout(() => {
+        const proactiveMessage: Message = {
+          id: `proactive_${Date.now()}`,
+          type: "assistant",
+          content: `I notice you might be finding some of these tests challenging. That's completely normal! Would you like me to explain the current test in more detail, or would you prefer some general tips for cognitive assessments? I'm here to help make this as comfortable as possible for you.`,
+          timestamp: new Date(),
+        }
+        setMessages(prev => [...prev, proactiveMessage])
+      }, 30000) // Offer help after 30 seconds of inactivity
+
+      return () => clearTimeout(timer)
+    }
+  }, [currentStep, userPreferences.strugglingAreas])
+
+  // Step transition help
+  useEffect(() => {
+    if (currentStep > 0) {
+      const stepDetails = {
+        1: "Voice Analysis - Just read naturally, don't worry about perfection!",
+        2: "Memory Game - Take your time to study the cards before clicking.",
+        3: "Attention Test - Keep your eyes on the screen and click quickly when you see the target.",
+        4: "Processing Speed - Work quickly but accurately.",
+        5: "Spatial Reasoning - Visualize the pattern in your mind.",
+        6: "Working Memory - Hold the sequence in your memory.",
+        7: "Number Sequence - Look for the mathematical pattern.",
+        8: "Word Recall - Try creating mental associations.",
+        9: "Trail Making - Connect numbers in order as fast as possible.",
+        10: "Clock Drawing - Draw a complete clock with all numbers.",
+        11: "Verbal Fluency - Say as many words as you can think of.",
+        12: "MMSE - Answer each question to the best of your ability."
+      }
+
+      const stepTip = stepDetails[currentStep as keyof typeof stepDetails]
+      if (stepTip && !userPreferences.hasAskedForHelp) {
+        const timer = setTimeout(() => {
+          const tipMessage: Message = {
+            id: `tip_${currentStep}_${Date.now()}`,
+            type: "assistant",
+            content: `💡 Quick tip for this step: ${stepTip} Feel free to ask me any questions!`,
+            timestamp: new Date(),
+          }
+          setMessages(prev => [...prev, tipMessage])
+        }, 10000) // Show tip after 10 seconds
+
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [currentStep, userPreferences.hasAskedForHelp])
 
   // Initialize speech recognition and synthesis with better error handling
   useEffect(() => {
@@ -293,10 +357,26 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
     setShowScheduleOptions(false)
     setAudioError(null)
 
-    // Simulate AI response delay
+    // Update conversation context and user preferences
+    setConversationContext(prev => [...prev.slice(-4), content.trim().toLowerCase()]) // Keep last 5 messages for context
+    
+    // Learn from user patterns
+    const input = content.trim().toLowerCase()
+    if (input.includes('help') || input.includes('confused') || input.includes('don\'t understand')) {
+      setUserPreferences(prev => ({ ...prev, hasAskedForHelp: true }))
+    }
+    
+    if (input.includes('difficult') || input.includes('hard') || input.includes('struggle')) {
+      setUserPreferences(prev => ({
+        ...prev,
+        strugglingAreas: [...prev.strugglingAreas, `step_${currentStep}`].slice(-3)
+      }))
+    }
+
+    // Simulate AI response delay with more realistic timing
     setTimeout(
       () => {
-        const response = generateMannuResponse(content.trim(), currentStep, currentLanguage.code)
+        const response = generateMannuResponse(content.trim(), currentStep, currentLanguage.code, conversationContext, userPreferences)
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: "assistant",
@@ -327,209 +407,249 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
     )
   }
 
-  const generateMannuResponse = (userInput: string, step: number, langCode: string): string => {
+  const generateMannuResponse = (userInput: string, step: number, langCode: string, context: string[] = [], preferences: any = {}): string => {
     const input = userInput.toLowerCase().trim()
     const t = translations[langCode as keyof typeof translations] || translations.en
 
-    // Context-aware responses based on assessment step
-    const stepContexts = {
-      0: "Since you're starting your assessment, ",
-      1: "During the voice analysis phase, ",
-      2: "For the memory matching game, ",
-      3: "In the attention focus test, ",
-      4: "For the processing speed assessment, ",
-      5: "During spatial reasoning, ",
-      6: "In the working memory test, ",
-      7: "For number sequences, ",
-      8: "During word recall, ",
-      9: "In the trail making test, ",
-      10: "For clock drawing, ",
-      11: "During verbal fluency, ",
-      12: "In the MMSE screening, ",
+    // Advanced step-specific context and guidance
+    const stepDetails = {
+      0: {
+        name: "Welcome & Setup",
+        description: "We're preparing to start your comprehensive cognitive assessment",
+        tips: "Take your time to get comfortable. Make sure you're in a quiet environment with good lighting.",
+        encouragement: "You're taking an important step in understanding your cognitive health!"
+      },
+      1: {
+        name: "Voice Analysis",
+        description: "Recording your voice to analyze speech patterns, fluency, and cognitive markers",
+        tips: "Speak clearly and naturally. Don't worry about perfect pronunciation - just read at your normal pace.",
+        encouragement: "Your voice patterns provide valuable insights into cognitive function. You're doing great!"
+      },
+      2: {
+        name: "Memory Matching Game",
+        description: "Testing visual memory and pattern recognition abilities",
+        tips: "Try to remember the positions of matching pairs. Take a moment to study the cards before clicking.",
+        encouragement: "Memory games strengthen neural pathways. Each attempt helps your brain!"
+      },
+      3: {
+        name: "Attention Focus Test",
+        description: "Measuring sustained attention and reaction time",
+        tips: "Keep your eyes focused on the screen and click the target as quickly as possible when it appears.",
+        encouragement: "Attention is like a muscle - this exercise is strengthening your focus!"
+      },
+      4: {
+        name: "Processing Speed Assessment",
+        description: "Evaluating how quickly you can process and respond to information",
+        tips: "Work as quickly as possible while maintaining accuracy. Speed and precision both matter.",
+        encouragement: "Processing speed is key to cognitive efficiency. You're building mental agility!"
+      },
+      5: {
+        name: "Spatial Reasoning",
+        description: "Testing spatial memory and pattern recognition skills",
+        tips: "Visualize the pattern in your mind and try to recreate it exactly as shown.",
+        encouragement: "Spatial skills are crucial for navigation and problem-solving. Great work!"
+      },
+      6: {
+        name: "Working Memory Test",
+        description: "Assessing short-term memory capacity and manipulation",
+        tips: "Try to hold the sequence in your mind and recall it in the correct order.",
+        encouragement: "Working memory is the foundation of complex thinking. You're exercising your mental workspace!"
+      },
+      7: {
+        name: "Number Sequence",
+        description: "Evaluating logical reasoning and pattern detection abilities",
+        tips: "Look for the mathematical relationship between numbers. What's the pattern or rule?",
+        encouragement: "Pattern recognition shows your brain's ability to find order and meaning. Excellent!"
+      },
+      8: {
+        name: "Word Recall",
+        description: "Testing verbal memory and recall capabilities",
+        tips: "Try to create mental associations or stories to help remember the words.",
+        encouragement: "Verbal memory is essential for communication and learning. You're doing wonderfully!"
+      },
+      9: {
+        name: "Trail Making Test",
+        description: "Measuring visual attention and task switching abilities",
+        tips: "Connect the numbers in order as quickly as possible. Stay focused and move efficiently.",
+        encouragement: "This test measures executive function - your brain's CEO skills!"
+      },
+      10: {
+        name: "Clock Drawing",
+        description: "Assessing visuospatial skills and executive function",
+        tips: "Draw a complete clock face with all numbers and set the hands to the requested time.",
+        encouragement: "Clock drawing integrates multiple cognitive skills. You're showing great coordination!"
+      },
+      11: {
+        name: "Verbal Fluency",
+        description: "Testing language production and executive function",
+        tips: "Say as many words as you can think of in the given category. Don't worry about repetition.",
+        encouragement: "Verbal fluency shows your brain's language networks in action. Keep going!"
+      },
+      12: {
+        name: "MMSE Screening",
+        description: "Comprehensive cognitive screening covering multiple domains",
+        tips: "Answer each question to the best of your ability. There's no need to overthink.",
+        encouragement: "The MMSE is a gold standard assessment. You're completing something really valuable!"
+      }
     }
 
-    // More comprehensive keyword matching
-    const greetingWords = [
-      "hello",
-      "hi",
-      "hey",
-      "good morning",
-      "good afternoon",
-      "good evening",
-      "hola",
-      "你好",
-      "नमस्ते",
-      "bonjour",
-      "guten tag",
-      "ciao",
-      "olá",
+    const currentStepInfo = stepDetails[step as keyof typeof stepDetails]
+
+    // Context awareness - check if user is repeating questions or showing patterns
+    const isRepeatingQuestion = context.some(prevMsg => 
+      prevMsg.includes(input.split(' ')[0]) || input.includes(prevMsg.split(' ')[0])
+    )
+    const hasAskedForHelp = preferences.hasAskedForHelp || input.includes('help')
+    const isStruggling = preferences.strugglingAreas?.includes(`step_${step}`) || 
+                        input.includes('difficult') || input.includes('hard')
+
+    // Enhanced keyword matching with context awareness
+    const patterns = {
+      greeting: /\b(hello|hi|hey|good\s+(morning|afternoon|evening)|hola|你好|नमस्ते|bonjour|guten\s+tag|ciao|olá)\b/i,
+      help: /\b(help|assist|support|guide|explain|confused|lost|stuck|don't\s+understand|ayuda|帮助|मदद)\b/i,
+      whatIs: /\b(what\s+is|what's|tell\s+me\s+about|explain|describe)\b/i,
+      howTo: /\b(how\s+to|how\s+do|how\s+does|how\s+can|instructions)\b/i,
+      time: /\b(time|long|duration|how\s+much|minutes|hours|when|finish|complete|tiempo|时间|समय)\b/i,
+      nervous: /\b(nervous|anxious|worried|scared|afraid|stress|panic|overwhelmed|nervioso|紧张|घबराना)\b/i,
+      difficulty: /\b(difficult|hard|challenging|tough|struggle|can't\s+do|impossible|difícil|困难|कठिन)\b/i,
+      score: /\b(score|result|grade|performance|how\s+am\s+i\s+doing|feedback|report|puntuación|分数|स्कोर)\b/i,
+      brain: /\b(brain|memory|cognitive|mental|health|tips|improve|enhance|cerebro|大脑|मस्तिष्क)\b/i,
+      encourage: /\b(encourage|motivation|confidence|boost|support|cheer|ánimo|鼓励|प्रोत्साहन)\b/i,
+      schedule: /\b(schedule|appointment|consultation|doctor|meeting|book|see\s+someone|cita|预约|नियुक्ति)\b/i,
+      skip: /\b(skip|pass|next|move\s+on|don't\s+want|saltar|跳过|छोड़ना)\b/i,
+      repeat: /\b(repeat|again|once\s+more|didn't\s+understand|repetir|重复|दोहराना)\b/i,
+      pause: /\b(pause|break|stop|wait|rest|pausa|暂停|रुकना)\b/i
+    }
+
+    // Step-specific question handling with context awareness
+    if (currentStepInfo) {
+      // What is this test? - Enhanced with context
+      if (patterns.whatIs.test(input) && (input.includes('test') || input.includes('this') || input.includes('step'))) {
+        const contextualInfo = isRepeatingQuestion ? 
+          "Let me explain this differently. " : 
+          hasAskedForHelp ? "Since you've been asking for help, let me be extra clear. " : ""
+        return `${contextualInfo}This is the ${currentStepInfo.name}. ${currentStepInfo.description}. ${currentStepInfo.tips} ${currentStepInfo.encouragement}`
+      }
+
+      // How to do this test? - Enhanced with struggle detection
+      if (patterns.howTo.test(input) && (input.includes('test') || input.includes('this') || input.includes('step'))) {
+        const strugglingHelp = isStruggling ? 
+          "I notice this might be challenging for you, so let me break it down step by step. " : ""
+        return `${strugglingHelp}For the ${currentStepInfo.name}: ${currentStepInfo.tips} Remember, ${currentStepInfo.encouragement.toLowerCase()}`
+      }
+
+      // Test-specific difficulty help - More empathetic for struggling users
+      if (patterns.difficulty.test(input)) {
+        const empathy = isStruggling ? 
+          "I can see you're finding this challenging, and that's completely okay. Many people do. " : ""
+        return `${empathy}I understand the ${currentStepInfo.name} can be challenging. ${currentStepInfo.tips} Don't worry about perfect performance - the goal is to do your best. ${currentStepInfo.encouragement}`
+      }
+
+      // Skip/pass requests - More supportive for repeat requests
+      if (patterns.skip.test(input)) {
+        const supportiveMessage = isRepeatingQuestion ? 
+          "I understand you really want to move on. " : ""
+        return `${supportiveMessage}I understand you might want to move on, but each test in the ${currentStepInfo.name} provides valuable insights. ${currentStepInfo.encouragement} Would you like some tips to make it easier? ${currentStepInfo.tips}`
+      }
+    }
+
+    // General conversation patterns
+    if (patterns.greeting.test(input)) {
+      const stepContext = currentStepInfo ? ` We're currently on the ${currentStepInfo.name}.` : ""
+      return `Hello! I'm Mannu, your AI cognitive health companion.${stepContext} I'm here to guide you through your assessment and answer any questions. How can I help you today?`
+    }
+
+    if (patterns.help.test(input)) {
+      const stepHelp = currentStepInfo ? ` For the current ${currentStepInfo.name}: ${currentStepInfo.tips}` : ""
+      return `I'm here to help! I can explain how tests work, provide encouragement, answer questions about brain health, or just chat to keep you comfortable.${stepHelp} What specific help do you need?`
+    }
+
+    if (patterns.time.test(input)) {
+      const stepTime = currentStepInfo ? ` The ${currentStepInfo.name} typically takes 2-3 minutes.` : ""
+      return `The complete assessment takes about 20-25 minutes total.${stepTime} You can take breaks between sections if needed. Focus on doing your best rather than rushing!`
+    }
+
+    if (patterns.nervous.test(input)) {
+      const stepEncouragement = currentStepInfo ? ` For the ${currentStepInfo.name}, remember: ${currentStepInfo.encouragement}` : ""
+      return `It's completely normal to feel nervous! This assessment is designed to help, not judge you. Take deep breaths and remember that I'm here to support you.${stepEncouragement} You're doing great!`
+    }
+
+    if (patterns.score.test(input)) {
+      return `You'll receive a comprehensive report after completing all tests, showing your cognitive strengths and areas for attention. The results include personalized recommendations and suggestions for maintaining brain health. Remember, this isn't about pass/fail - it's about understanding your unique cognitive profile!`
+    }
+
+    if (patterns.brain.test(input)) {
+      const tips = [
+        "Regular physical exercise increases blood flow to the brain and promotes neuroplasticity",
+        "Quality sleep (7-9 hours) helps consolidate memories and clear brain toxins",
+        "Eating omega-3 rich foods like fish, nuts, and seeds supports brain health",
+        "Learning new skills creates new neural pathways and keeps your brain active",
+        "Social connections and meaningful relationships are crucial for cognitive wellness",
+        "Meditation and mindfulness can improve focus and reduce cognitive stress",
+        "Staying hydrated and limiting alcohol helps maintain optimal brain function"
+      ]
+      const randomTip = tips[Math.floor(Math.random() * tips.length)]
+      return `Here's a brain health tip: ${randomTip}. Taking this assessment is already a great step in caring for your cognitive health! Would you like more specific advice?`
+    }
+
+    if (patterns.encourage.test(input)) {
+      const encouragements = [
+        "You're doing wonderfully! Every step in this assessment provides valuable insights about your cognitive health.",
+        "I believe in you! Your brain is remarkable and capable of amazing things.",
+        "Remember, this isn't about perfection - it's about understanding your cognitive strengths and areas to nurture.",
+        "You've got this! Take your time and trust in your abilities.",
+        "I'm proud of you for taking this important step in understanding your brain health.",
+        "Your effort and participation are what matter most. You're showing great dedication to your cognitive wellness!"
+      ]
+      const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)]
+      const stepBoost = currentStepInfo ? ` ${currentStepInfo.encouragement}` : ""
+      return `${randomEncouragement}${stepBoost} Keep going - you're making excellent progress!`
+    }
+
+    if (patterns.schedule.test(input)) {
+      return `I can help you schedule a consultation with our healthcare professionals. We offer neurological consultations, cognitive therapy sessions, and general health check-ups. What type of appointment would you like to book?`
+    }
+
+    if (patterns.repeat.test(input)) {
+      const stepRepeat = currentStepInfo ? ` For the ${currentStepInfo.name}: ${currentStepInfo.description}. ${currentStepInfo.tips}` : ""
+      return `Of course! Let me explain again.${stepRepeat} Feel free to ask me to repeat anything you need clarification on!`
+    }
+
+    if (patterns.pause.test(input)) {
+      return `Absolutely! Take all the time you need. This assessment isn't timed overall, so you can pause between sections. When you're ready to continue, just let me know. Your comfort and well-being are most important!`
+    }
+
+    // Advanced contextual responses
+    if (input.includes('what') && input.includes('name')) {
+      return "I'm Mannu, your AI cognitive health companion! I'm designed specifically to help with brain health assessments and provide support throughout your cognitive evaluation journey."
+    }
+
+    if (input.includes('why') && (input.includes('test') || input.includes('assessment'))) {
+      return "Cognitive assessments help identify your brain's strengths and areas that might benefit from attention. Early detection and understanding of cognitive patterns can help maintain brain health and quality of life. Think of it as a wellness check for your mind!"
+    }
+
+    if (input.includes('accurate') || input.includes('reliable')) {
+      return "Our assessment uses scientifically validated tests that have been used in clinical settings for decades. The AI analysis combines multiple data points including response times, accuracy patterns, and behavioral markers to provide comprehensive insights. Everything is designed with clinical precision!"
+    }
+
+    if (input.includes('privacy') || input.includes('secure') || input.includes('data')) {
+      return "Your privacy is absolutely protected! All data is encrypted and stored securely. Your assessment results are confidential and only accessible to you and any healthcare providers you choose to share them with. We follow strict medical privacy standards."
+    }
+
+    // Contextual default responses based on current step
+    const contextualDefaults = currentStepInfo ? [
+      `That's a great question about the ${currentStepInfo.name}! ${currentStepInfo.description} How can I help you feel more comfortable with this step?`,
+      `I'm here to support you through the ${currentStepInfo.name}. ${currentStepInfo.encouragement} What would you like to know?`,
+      `Thanks for sharing that! During the ${currentStepInfo.name}, ${currentStepInfo.tips} Is there anything specific I can help clarify?`,
+      `I appreciate you talking with me! The ${currentStepInfo.name} is an important part of understanding your cognitive health. ${currentStepInfo.encouragement} What's on your mind?`
+    ] : [
+      "That's an interesting point! I'm here to help make this assessment experience as comfortable and informative as possible. What would you like to know?",
+      "I'm listening and here to support you! Feel free to ask me anything about the assessment, brain health, or if you just want to chat.",
+      "Thanks for sharing that with me! I want to make sure you feel confident and supported throughout this process. How can I help?",
+      "I appreciate you talking with me! My goal is to make this assessment both informative and comfortable for you. What's on your mind?"
     ]
-    const helpWords = [
-      "help",
-      "assist",
-      "support",
-      "guide",
-      "explain",
-      "ayuda",
-      "帮助",
-      "मदद",
-      "aide",
-      "hilfe",
-      "aiuto",
-      "ajuda",
-    ]
-    const testWords = [
-      "test",
-      "assessment",
-      "exam",
-      "evaluation",
-      "screening",
-      "prueba",
-      "测试",
-      "परीक्षण",
-      "test",
-      "prüfung",
-      "esame",
-      "teste",
-    ]
-    const timeWords = [
-      "time",
-      "long",
-      "duration",
-      "how much",
-      "minutes",
-      "hours",
-      "tiempo",
-      "时间",
-      "समय",
-      "temps",
-      "zeit",
-      "tempo",
-      "tempo",
-    ]
-    const nervousWords = [
-      "nervous",
-      "anxious",
-      "worried",
-      "scared",
-      "afraid",
-      "nervioso",
-      "紧张",
-      "घबराना",
-      "nerveux",
-      "nervös",
-      "nervoso",
-      "nervoso",
-    ]
-    const brainWords = [
-      "brain",
-      "health",
-      "tips",
-      "improve",
-      "memory",
-      "cerebro",
-      "大脑",
-      "मस्तिष्क",
-      "cerveau",
-      "gehirn",
-      "cervello",
-      "cérebro",
-    ]
-    const encourageWords = [
-      "encourage",
-      "motivation",
-      "confidence",
-      "support",
-      "boost",
-      "ánimo",
-      "鼓励",
-      "प्रोत्साहन",
-      "encouragement",
-      "ermutigung",
-      "incoraggiamento",
-      "encorajamento",
-    ]
-    const scheduleWords = [
-      "schedule",
-      "appointment",
-      "consultation",
-      "doctor",
-      "meeting",
-      "book",
-      "cita",
-      "预约",
-      "नियुक्ति",
-      "rendez-vous",
-      "termin",
-      "appuntamento",
-      "consulta",
-    ]
 
-    // Check for greeting
-    if (greetingWords.some((word) => input.includes(word))) {
-      return `Hello! I'm Mannu, your friendly AI health assistant. ${stepContexts[step as keyof typeof stepContexts] || ""}I'm here to guide you through your cognitive assessment and answer any questions. What would you like to know?`
-    }
-
-    // Check for help requests
-    if (helpWords.some((word) => input.includes(word))) {
-      return t.help
-    }
-
-    // Check for assessment questions
-    if (testWords.some((word) => input.includes(word))) {
-      return `${stepContexts[step as keyof typeof stepContexts] || ""}${t.assessment}`
-    }
-
-    // Check for time questions
-    if (timeWords.some((word) => input.includes(word))) {
-      return t.time
-    }
-
-    // Check for nervousness
-    if (nervousWords.some((word) => input.includes(word))) {
-      return t.nervous
-    }
-
-    // Check for brain health tips
-    if (brainWords.some((word) => input.includes(word))) {
-      const randomTip = t.brainTips[Math.floor(Math.random() * t.brainTips.length)]
-      return `Here's a great brain health tip: ${randomTip} Would you like to know more about maintaining cognitive wellness?`
-    }
-
-    // Check for encouragement
-    if (encourageWords.some((word) => input.includes(word))) {
-      const randomEncouragement = t.encouragement[Math.floor(Math.random() * t.encouragement.length)]
-      return `${randomEncouragement} ${stepContexts[step as keyof typeof stepContexts] || ""}Keep going - you're making excellent progress!`
-    }
-
-    // Check for scheduling
-    if (scheduleWords.some((word) => input.includes(word))) {
-      return t.schedule
-    }
-
-    // Specific responses for common questions
-    if (input.includes("what") && input.includes("name")) {
-      return "I'm Mannu, your AI health companion! I'm here to help you with your cognitive assessment and provide support throughout the process."
-    }
-
-    if (input.includes("how") && (input.includes("work") || input.includes("function"))) {
-      return `${stepContexts[step as keyof typeof stepContexts] || ""}Each test in our assessment is scientifically designed to measure specific cognitive functions. The AI analyzes your responses, reaction times, and patterns to provide insights into your brain health. Everything is secure and private!`
-    }
-
-    if (input.includes("result") || input.includes("score") || input.includes("report")) {
-      return `After completing all tests, you'll receive a comprehensive report showing your cognitive strengths and areas for attention. ${stepContexts[step as keyof typeof stepContexts] || ""}The results include personalized recommendations and, if needed, suggestions for follow-up care.`
-    }
-
-    // Default contextual responses
-    const defaultResponses = [
-      `That's an interesting question! ${stepContexts[step as keyof typeof stepContexts] || ""}Let me help you with that. Could you tell me more about what you'd like to know?`,
-      `I appreciate you sharing that with me. ${stepContexts[step as keyof typeof stepContexts] || ""}How can I best support you right now?`,
-      `Thanks for talking with me! ${stepContexts[step as keyof typeof stepContexts] || ""}I'm here to make this experience as comfortable as possible. What's on your mind?`,
-      `I'm listening and here to help! ${stepContexts[step as keyof typeof stepContexts] || ""}Feel free to ask me anything about the assessment or brain health in general.`,
-      `That's a great point! ${stepContexts[step as keyof typeof stepContexts] || ""}I want to make sure you feel supported throughout this process. How are you feeling so far?`,
-    ]
-
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)]
+    return contextualDefaults[Math.floor(Math.random() * contextualDefaults.length)]
   }
 
   const handleScheduleConsultation = (type: string) => {
@@ -612,7 +732,9 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
   }
 
   // Fixed positioning for the assistant
-  const containerClasses = isFixed ? "fixed bottom-4 right-4 z-50 w-96 max-h-[600px]" : "w-full max-w-md mx-auto"
+  const containerClasses = isFixed
+    ? "fixed z-50 bottom-2 left-2 right-2 sm:bottom-4 sm:right-4 sm:left-auto w-full sm:w-96 md:w-[28rem] lg:w-[32rem] max-h-[80vh]"
+    : "w-full max-w-lg md:max-w-xl lg:max-w-2xl mx-auto px-2"
 
   return (
     <div className={containerClasses}>
@@ -620,10 +742,10 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
       {isFixed && !isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300 hover:scale-110 group fixed bottom-4 right-4 z-50"
+          className="p-0 w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300 hover:scale-110 group fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-50"
         >
-          <div className="relative">
-            <Bot className="h-7 w-7 text-white" />
+          <div className="relative w-full h-full flex items-center justify-center">
+            <Bot className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" />
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse" />
           </div>
         </Button>
@@ -631,14 +753,13 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
 
       {/* Main Assistant Panel */}
       {(!isFixed || isOpen) && (
-        <Card className="bg-gradient-to-br from-gray-900/95 to-black/95 border border-purple-500/20 backdrop-blur-xl shadow-2xl shadow-purple-500/10 fixed bottom-4 right-4 z-50 w-96 max-h-[600px]">
+        <Card className="bg-gradient-to-br from-gray-900/95 to-black/95 border border-purple-500/20 backdrop-blur-xl shadow-2xl shadow-purple-500/10 fixed bottom-3 left-2 right-2 sm:bottom-4 sm:right-4 sm:left-auto z-50 w-full sm:w-96 md:w-[28rem] lg:w-[32rem] max-h-[85vh] h-[80vh] sm:h-auto flex flex-col overflow-hidden">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <Avatar className="w-12 h-12 border-2 border-purple-500/30">
-                  <AvatarImage src="/placeholder.svg?height=48&width=48" />
-                  <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold text-lg">
-                    M
+                <Avatar className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-purple-500/30 bg-white/5">
+                  <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                    <Bot className="w-8 h-8 sm:w-9 sm:h-9" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -649,7 +770,43 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
                   <p className="text-purple-300 text-sm">Your AI Health Companion</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const stepDetails = {
+                      0: "Welcome! I can help explain the assessment, answer questions, or just chat to keep you comfortable.",
+                      1: "Voice Analysis: Read the passage naturally at your normal pace. Don't worry about perfection!",
+                      2: "Memory Game: Study the cards carefully before clicking. Take your time to remember positions.",
+                      3: "Attention Test: Keep your eyes focused and click the target as quickly as possible.",
+                      4: "Processing Speed: Work quickly but maintain accuracy. Both speed and precision matter.",
+                      5: "Spatial Reasoning: Visualize the pattern in your mind and recreate it exactly.",
+                      6: "Working Memory: Hold the sequence in your memory and recall it in correct order.",
+                      7: "Number Sequence: Look for the mathematical relationship between the numbers.",
+                      8: "Word Recall: Create mental associations or stories to help remember the words.",
+                      9: "Trail Making: Connect numbers in order as fast as possible while staying accurate.",
+                      10: "Clock Drawing: Draw a complete clock face with all numbers and set the time.",
+                      11: "Verbal Fluency: Say as many words as you can in the category. Don't worry about repetition.",
+                      12: "MMSE: Answer each question to the best of your ability. No need to overthink."
+                    }
+                    
+                    const quickHelp = stepDetails[currentStep as keyof typeof stepDetails] || 
+                      "I can help explain tests, provide encouragement, answer brain health questions, or schedule consultations. What do you need?"
+                    
+                    const helpMessage: Message = {
+                      id: `quickhelp_${Date.now()}`,
+                      type: "assistant",
+                      content: `💡 ${quickHelp}`,
+                      timestamp: new Date(),
+                    }
+                    setMessages(prev => [...prev, helpMessage])
+                  }}
+                  className="text-gray-400 hover:text-white hover:bg-gray-700/50"
+                  title="Quick Help"
+                >
+                  <Lightbulb className="h-4 w-4" />
+                </Button>
                 {isFixed && (
                   <>
                     <Button
@@ -710,7 +867,7 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
           </CardHeader>
 
           {!isMinimized && (
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 flex flex-col min-h-0">
               {/* Audio Error Display */}
               {audioError && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start space-x-2">
@@ -720,7 +877,7 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
               )}
 
               {/* Messages Area */}
-              <ScrollArea className="h-80 w-full pr-4">
+              <ScrollArea className="flex-1 min-h-0 w-full pr-4">
                 <div className="space-y-4">
                   {messages.map((message) => (
                     <div
@@ -874,7 +1031,7 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
               )}
 
               {/* Text Input */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 sticky bottom-0 left-0 right-0 bg-gradient-to-br from-gray-900/95 to-black/95 pb-[env(safe-area-inset-bottom)] pt-2 z-10">
                 <Input
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
@@ -891,8 +1048,19 @@ export function MannuAssistant({ currentStep = 0, isFixed = false, onClose }: Ma
                 </Button>
               </div>
 
+              {/* Mobile toggle for extras */}
+              <div className="sm:hidden -mx-4 px-4">
+                <button
+                  type="button"
+                  onClick={() => setIsExtrasOpen((v) => !v)}
+                  className="w-full text-center text-xs text-purple-300 py-1 hover:text-white"
+                >
+                  {isExtrasOpen ? "Hide options ▲" : "More options ▼"}
+                </button>
+              </div>
+
               {/* Quick Actions */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`${isExtrasOpen ? 'grid' : 'hidden sm:grid'} grid-cols-2 gap-2`}>
                 <Button
                   variant="outline"
                   size="sm"

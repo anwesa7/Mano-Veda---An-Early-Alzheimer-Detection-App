@@ -167,92 +167,162 @@ export default function HomePage() {
 
       {/* Header */}
       <header className="relative z-50 border-b border-white/10 bg-black/50 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4 group">
-            <div className="relative">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all duration-500 group-hover:scale-110">
-                <Brain className="h-8 w-8 text-white animate-pulse" />
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-4 group">
+              <div className="relative">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all duration-500 group-hover:scale-110">
+                  <Brain className="h-5 w-5 sm:h-8 sm:w-8 text-white animate-pulse" />
+                </div>
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full border-2 border-black animate-bounce">
+                  <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-green-400 rounded-full animate-ping" />
+                </div>
               </div>
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full border-2 border-black animate-bounce">
-                <div className="w-full h-full bg-gradient-to-r from-emerald-400 to-green-400 rounded-full animate-ping" />
+              <div className="hidden sm:block">
+                <span className="text-2xl sm:text-3xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Mano Veda
+                </span>
+                <div className="text-xs sm:text-sm text-gray-400 font-medium flex items-center">
+                  <Sparkles className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
+                  AI-Powered Cognitive Health
+                </div>
               </div>
+              <div className="sm:hidden">
+                <span className="text-xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Mano Veda
+                </span>
+              </div>
+            </Link>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent border-white/20 text-white hover:bg-white/10 p-2"
+              >
+                <User className="h-4 w-4" />
+              </Button>
             </div>
-            <div>
-              <span className="text-3xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Mano Veda
-              </span>
-              <div className="text-sm text-gray-400 font-medium flex items-center">
-                <Sparkles className="w-3 h-3 mr-1" />
-                AI-Powered Cognitive Health
-              </div>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
+              <a href="#features" className="text-gray-300 hover:text-white transition-colors text-sm lg:text-base">
+                Features
+              </a>
+              <a href="#science" className="text-gray-300 hover:text-white transition-colors text-sm lg:text-base">
+                Science
+              </a>
+              <a href="#global-impact" className="text-gray-300 hover:text-white transition-colors text-sm lg:text-base">
+                Global Impact
+              </a>
+              <a href="#reviews" className="text-gray-300 hover:text-white transition-colors text-sm lg:text-base">
+                Reviews
+              </a>
+              <Link href="/subscription" className="text-gray-300 hover:text-white transition-colors text-sm lg:text-base">
+                Pricing
+              </Link>
+              <Button
+                onClick={() => setShowMannu(true)}
+                variant="outline"
+                size="sm"
+                className="bg-transparent border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+              >
+                <MessageSquare className="mr-2 h-3 w-3" />
+                <span className="hidden lg:inline">Chat with Mannu</span>
+                <span className="lg:hidden">Mannu</span>
+              </Button>
+            </nav>
+
+            {/* Desktop Action Buttons */}
+            <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
+              <Link href="/auth/login">
+                <Button variant="outline" size="sm" className="bg-transparent border-white/20 text-white hover:bg-white/10">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/patient-info">
+                <Button size="sm" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-2xl shadow-purple-500/25">
+                  <span className="hidden lg:inline">Start Assessment</span>
+                  <span className="lg:hidden">Start</span>
+                  <ArrowRight className="ml-2 h-3 w-3" />
+                </Button>
+              </Link>
             </div>
           </div>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-gray-300 hover:text-white transition-colors">
-              Features
-            </a>
-            <a href="#science" className="text-gray-300 hover:text-white transition-colors">
-              Science
-            </a>
-            <a href="#global-impact" className="text-gray-300 hover:text-white transition-colors">
-              Global Impact
-            </a>
-            <a href="#reviews" className="text-gray-300 hover:text-white transition-colors">
-              Reviews
-            </a>
-            <Button
-              onClick={() => setShowMannu(true)}
-              variant="outline"
-              className="bg-transparent border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Chat with Mannu
-            </Button>
-          </nav>
-
-          <div className="flex items-center space-x-4">
-            <Link href="/auth/login">
-              <Button variant="outline" className="bg-transparent border-white/20 text-white hover:bg-white/10">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/patient-info">
-              <Button className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-2xl shadow-purple-500/25">
-                Start Assessment
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+          {/* Mobile Navigation */}
+          <div className="md:hidden mt-4 pt-4 border-t border-white/10">
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center justify-between">
+                <Link href="/patient-info">
+                  <Button size="sm" className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-2xl shadow-purple-500/25 btn-mobile">
+                    <Brain className="mr-2 h-4 w-4" />
+                    Start Assessment
+                  </Button>
+                </Link>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    onClick={() => setShowMannu(true)}
+                    variant="outline"
+                    size="sm"
+                    className="bg-transparent border-purple-500/30 text-purple-300 hover:bg-purple-500/10 btn-mobile"
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Mannu
+                  </Button>
+                  <Link href="/auth/login">
+                    <Button variant="outline" size="sm" className="bg-transparent border-white/20 text-white hover:bg-white/10 btn-mobile">
+                      Sign In
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <a href="#features" className="text-gray-300 hover:text-white transition-colors">
+                  Features
+                </a>
+                <a href="#science" className="text-gray-300 hover:text-white transition-colors">
+                  Science
+                </a>
+                <Link href="/subscription" className="text-gray-300 hover:text-white transition-colors">
+                  Pricing
+                </Link>
+                <a href="#reviews" className="text-gray-300 hover:text-white transition-colors">
+                  Reviews
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-30 py-32 px-4">
+      <section className="relative z-30 py-16 sm:py-24 lg:py-32 px-4">
         <div className="container mx-auto text-center max-w-6xl">
-          <div className="relative mb-12">
+          <div className="relative mb-8 sm:mb-12">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl rounded-full" />
-            <h1 className="relative text-7xl md:text-8xl font-black leading-tight">
-              <span className="block text-white mb-4">Detect Alzheimer</span>
+            <h1 className="relative text-[clamp(2.5rem,10vw,4.5rem)] sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[1.03] tracking-tight">
+              <span className="block text-white mb-0">Detect Alzheimer</span>
               <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Earlier
               </span>
             </h1>
           </div>
 
-          <p className="text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed mb-16 font-light">
+          <p className="text-lg sm:text-xl lg:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8 sm:mb-12 lg:mb-16 font-light px-4">
             Revolutionary AI-powered cognitive assessment platform with real-time analysis, multilingual support, and
             personalized recommendations. Early detection saves lives and improves outcomes.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-20">
-            <Link href="/patient-info">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mb-12 sm:mb-16 lg:mb-20 px-4">
+            <Link href="/patient-info" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white px-12 py-6 text-xl rounded-2xl shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-500 transform hover:scale-105 border-0"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white px-8 sm:px-12 py-4 sm:py-6 text-lg sm:text-xl rounded-2xl shadow-2xl shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-500 transform hover:scale-105 border-0 btn-mobile"
               >
-                <Brain className="mr-4 h-6 w-6" />
+                <Brain className="mr-3 sm:mr-4 h-5 w-5 sm:h-6 sm:w-6" />
                 Start Free Assessment
               </Button>
             </Link>
@@ -260,24 +330,33 @@ export default function HomePage() {
               onClick={() => setShowMannu(true)}
               variant="outline"
               size="lg"
-              className="bg-transparent border-white/20 text-white hover:bg-white/10 px-12 py-6 text-xl rounded-2xl backdrop-blur-xl"
+              className="w-full sm:w-auto bg-transparent border-white/20 text-white hover:bg-white/10 px-8 sm:px-12 py-4 sm:py-6 text-lg sm:text-xl rounded-2xl backdrop-blur-xl btn-mobile"
             >
-              <MessageSquare className="mr-4 h-6 w-6" />
+              <MessageSquare className="mr-3 sm:mr-4 h-5 w-5 sm:h-6 sm:w-6" />
               Meet Mannu AI
             </Button>
+            <Link href="/consultation" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white px-8 sm:px-12 py-4 sm:py-6 text-lg sm:text-xl rounded-2xl btn-mobile"
+              >
+                Want to Consult a Doctor?
+              </Button>
+            </Link>
           </div>
 
           {/* Critical Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 px-4">
             {globalStats.map((stat, index) => (
-              <div key={index} className="text-center group hover:scale-110 transition-all duration-500">
+              <div key={index} className="text-center group hover:scale-105 sm:hover:scale-110 transition-all duration-500">
                 <div
-                  className={`w-16 h-16 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl group-hover:shadow-3xl transition-all duration-500`}
+                  className={`w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br ${stat.color} rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-2xl group-hover:shadow-3xl transition-all duration-500`}
                 >
-                  <stat.icon className="h-8 w-8 text-white" />
+                  <stat.icon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
-                <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
-                <div className="text-gray-400 text-sm">{stat.label}</div>
+                <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">{stat.value}</div>
+                <div className="text-gray-400 text-xs sm:text-sm">{stat.label}</div>
               </div>
             ))}
           </div>

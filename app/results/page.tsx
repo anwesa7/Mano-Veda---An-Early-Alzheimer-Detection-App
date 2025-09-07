@@ -62,18 +62,21 @@ export default function ResultsPage(): JSX.Element {
   const [results, setResults] = useState<AssessmentResults | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null)
+  const [showRiskPopup, setShowRiskPopup] = useState(false)
+  const [voice, setVoice] = useState<any | null>(null)
 
   useEffect(() => {
     try {
       const storedResults = localStorage.getItem("assessmentResults")
       if (storedResults) {
-        const parsed = JSON.parse(storedResults) as AssessmentResults
+        const parsed = JSON.parse(storedResults) as any
         setResults(parsed)
+        if (parsed?.voiceAnalysis) setVoice(parsed.voiceAnalysis)
       } else {
         // fallback demo data
-        setResults({
+        const demo = {
           overallScore: 78,
-          riskLevel: "Low",
+          riskLevel: "High",
           completedTasks: ["voice-analysis", "memory-matching", "attention-focus"],
           gameScores: [
             { game: "Memory", score: 85, maxScore: 100 },
@@ -88,11 +91,13 @@ export default function ResultsPage(): JSX.Element {
             { game: "Verbal", score: 88, maxScore: 100 },
             { game: "Mmse", score: 90, maxScore: 100 },
           ],
-          voiceAnalysis: { clarity: 85, fluency: 78, pace: 82 },
+          voiceAnalysis: { clarity: 85, fluency: 78, pace: 82, label: 'neutral', confidence: 0.75 },
           biometrics: { heartRate: 72, stressLevel: 25, focusLevel: 85 },
           sessionDuration: 1200,
           completedAt: new Date().toISOString(),
-        })
+        }
+        setResults(demo as any)
+        setVoice(demo.voiceAnalysis)
       }
     } catch (error) {
       console.error("Error loading results:", error)
@@ -101,6 +106,12 @@ export default function ResultsPage(): JSX.Element {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (!results) return
+    const isHigh = results.riskLevel?.toLowerCase() === "high"
+    setShowRiskPopup(isHigh)
+  }, [results])
 
   if (loading) {
     return (
@@ -250,6 +261,31 @@ export default function ResultsPage(): JSX.Element {
           />
         </div>
       </div>
+
+      {/* High Risk Popup */}
+      {showRiskPopup && (
+        <div className="fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
+          <div className="relative max-w-lg w-full bg-slate-900 border border-red-500/30 rounded-2xl p-6 shadow-2xl">
+            <button
+              aria-label="Close"
+              className="absolute top-3 right-3 text-gray-400 hover:text-white"
+              onClick={() => setShowRiskPopup(false)}
+            >
+              ✕
+            </button>
+            <div className="text-xl font-bold text-red-300 mb-2">You may be at high risk of Alzheimer’s</div>
+            <p className="text-gray-200 mb-4">Would you like to consult a specialist?</p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link href="/consultation?specialization=Neurologist" className="w-full sm:w-auto">
+                <Button className="w-full bg-gradient-to-r from-red-500 to-pink-500">Book Neurologist</Button>
+              </Link>
+              <Link href="/alzheimers-care" className="w-full sm:w-auto">
+                <Button variant="secondary" className="w-full bg-white/10">Alzheimer’s Care Page</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="relative z-50 border-b border-white/10 bg-black/50 backdrop-blur-xl">
@@ -562,6 +598,14 @@ export default function ResultsPage(): JSX.Element {
               </CardHeader>
               <CardContent className="p-8">
                 <div className="space-y-6">
+                  {/* Label + Confidence (if available) */}
+                  {voice && (
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 rounded-xl bg-white/5 border border-white/10">
+                      <div className="text-white font-semibold">Predicted Label: <span className="text-cyan-300 font-bold capitalize">{voice.label || '—'}</span></div>
+                      <div className="text-gray-300">Confidence: <span className="font-bold text-cyan-400">{Math.round((voice.confidence || 0) * 100)}%</span></div>
+                    </div>
+                  )}
+
                   {[
                     { label: "Speech Clarity", value: results.voiceAnalysis.clarity, color: "from-blue-500 to-cyan-500" },
                     { label: "Speech Fluency", value: results.voiceAnalysis.fluency, color: "from-purple-500 to-pink-500" },
@@ -597,15 +641,6 @@ export default function ResultsPage(): JSX.Element {
               <CardContent className="p-8">
                 <div className="grid grid-cols-3 gap-6">
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                      <Heart className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="text-2xl font-black text-red-400 mb-1">{results.biometrics.heartRate}</div>
-                    <div className="text-sm text-gray-400">BPM</div>
-                    <div className="text-xs text-gray-500 mt-1">Heart Rate</div>
-                  </div>
-
-                  <div className="text-center">
                     <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
                       <AlertTriangle className="h-8 w-8 text-white" />
                     </div>
@@ -627,16 +662,25 @@ export default function ResultsPage(): JSX.Element {
             </Card>
           </div>
 
-          {/* Recommendations */}
+          {/* Next Steps */}
           <Card className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-white/10 backdrop-blur-xl shadow-2xl">
-            <CardHeader className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-b border-white/10">
+            <CardHeader className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-b border-white/10">
               <CardTitle className="flex items-center text-white text-2xl">
-                <Lightbulb className="mr-4 h-8 w-8 text-yellow-400" />
-                Personalized Recommendations
+                <Lightbulb className="mr-4 h-8 w-8 text-cyan-400" />
+                Next Steps
               </CardTitle>
-              <CardDescription className="text-gray-300 text-lg">AI-generated insights and improvement suggestions</CardDescription>
+              <CardDescription className="text-gray-300 text-lg">Consult with a doctor to discuss your assessment</CardDescription>
             </CardHeader>
             <CardContent className="p-8">
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                <Link href="/consultation" className="w-full sm:w-auto">
+                  <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">Consult with a Doctor</Button>
+                </Link>
+                <Link href="/alzheimers-care" className="w-full sm:w-auto">
+                  <Button variant="secondary" className="w-full bg-white/10">Learn about Alzheimer’s Care</Button>
+                </Link>
+              </div>
+              {/* Recommendations */}
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <h3 className="text-xl font-bold text-white flex items-center">
