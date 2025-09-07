@@ -12,11 +12,18 @@ import { Input } from "@/components/ui/input"
 import { doctors } from "@/lib/doctors"
 
 export default function ConsultationPage() {
+  return (
+    <Suspense fallback={<div />}> 
+      <ConsultationContent />
+    </Suspense>
+  )
+}
+
+function ConsultationContent() {
   const searchParams = useSearchParams()
   const [location, setLocation] = useState("")
   const [loadingLoc, setLoadingLoc] = useState(false)
 
-  // Read specialization from search params inside an inline Suspense boundary during render
   const specialization = searchParams.get("specialization") || ""
 
   const filteredDoctors = useMemo(() => {
@@ -39,7 +46,6 @@ export default function ConsultationPage() {
   }
 
   return (
-    <Suspense fallback={<div />}> 
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black text-white py-10 px-4">
       <div className="container mx-auto max-w-6xl space-y-8">
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -124,6 +130,5 @@ export default function ConsultationPage() {
         </section>
       </div>
     </main>
-    </Suspense>
   )
 }
