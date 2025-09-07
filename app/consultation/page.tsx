@@ -1,7 +1,9 @@
 "use client"
 
+export const dynamic = 'force-dynamic'
+
 import Link from "next/link"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { MapPin, Search, Star, ArrowRight, LocateFixed, Building2, Filter } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +15,8 @@ export default function ConsultationPage() {
   const searchParams = useSearchParams()
   const [location, setLocation] = useState("")
   const [loadingLoc, setLoadingLoc] = useState(false)
+
+  // Read specialization from search params inside an inline Suspense boundary during render
   const specialization = searchParams.get("specialization") || ""
 
   const filteredDoctors = useMemo(() => {
@@ -35,6 +39,7 @@ export default function ConsultationPage() {
   }
 
   return (
+    <Suspense fallback={<div />}> 
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black text-white py-10 px-4">
       <div className="container mx-auto max-w-6xl space-y-8">
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -119,5 +124,6 @@ export default function ConsultationPage() {
         </section>
       </div>
     </main>
+    </Suspense>
   )
 }
