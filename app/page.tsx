@@ -31,6 +31,24 @@ import { MannuAssistant } from "@/components/ai-assistant-mannu"
 export default function HomePage() {
   const [currentTestimonial, setCurrentTestimonial] = useState(0)
   const [showMannu, setShowMannu] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  type Particle = { left: number; top: number; width: number; height: number; animationDelay: number; animationDuration: number }
+  const [particles, setParticles] = useState<Particle[]>([])
+
+  // Ensure client-only rendering of random particles to avoid hydration mismatch
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    if (!mounted) return
+    const arr: Particle[] = Array.from({ length: 50 }).map((_, i) => ({
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      width: Math.random() * 4 + 2,
+      height: Math.random() * 4 + 2,
+      animationDelay: i * 0.1,
+      animationDuration: 3 + Math.random() * 4,
+    }))
+    setParticles(arr)
+  }, [mounted])
 
   const testimonials = [
     {
@@ -148,18 +166,18 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Floating Particles */}
-        {Array.from({ length: 50 }).map((_, i) => (
+        {/* Floating Particles (generated on client only) */}
+        {mounted && particles.map((p, i) => (
           <div
             key={i}
             className="absolute rounded-full bg-gradient-to-r from-blue-400 to-purple-400 animate-float opacity-20"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${Math.random() * 4 + 2}px`,
-              height: `${Math.random() * 4 + 2}px`,
-              animationDelay: `${i * 0.1}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              width: `${p.width}px`,
+              height: `${p.height}px`,
+              animationDelay: `${p.animationDelay}s`,
+              animationDuration: `${p.animationDuration}s`,
             }}
           />
         ))}
